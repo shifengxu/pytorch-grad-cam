@@ -288,3 +288,13 @@ Peng-Tao Jiang; Chang-Bin Zhang; Qibin Hou; Ming-Ming Cheng; Yunchao Wei`
 https://arxiv.org/abs/1905.00780 <br>
 `Full-Gradient Representation for Neural Network Visualization
 Suraj Srinivas, Francois Fleuret`
+
+----------
+
+# Trouble Shoot
+
+If module `ttach` not found in the conda env, here is how to install it:
+```bash
+conda install git pip
+pip install git+https://github.com/qubvel/ttach
+```
