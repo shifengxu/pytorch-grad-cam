@@ -22,8 +22,8 @@ def deprocess_image(img):
     return np.uint8(img * 255)
 
 
-def show_cam_on_image(img: np.ndarray,
-                      mask: np.ndarray,
+def show_cam_on_image(img: np.ndarray,   # shape [224, 224, 3]
+                      mask: np.ndarray,  # shape [224, 224]
                       use_rgb: bool = False,
                       colormap: int = cv2.COLORMAP_JET) -> np.ndarray:
     """ This function overlays the cam mask on the image as an heatmap.
@@ -35,7 +35,10 @@ def show_cam_on_image(img: np.ndarray,
     :param colormap: The OpenCV colormap to be used.
     :returns: The default image with the cam overlay.
     """
+
+    # https://learnopencv.com/applycolormap-for-pseudocoloring-in-opencv-c-python/
     heatmap = cv2.applyColorMap(np.uint8(255 * mask), colormap)
+    # heatmap shape: [224, 224, 3]
     if use_rgb:
         heatmap = cv2.cvtColor(heatmap, cv2.COLOR_BGR2RGB)
     heatmap = np.float32(heatmap) / 255

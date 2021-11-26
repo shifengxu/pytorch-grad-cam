@@ -88,11 +88,19 @@ if __name__ == '__main__':
     # find_layer_types_recursive(model, [torch.nn.ReLU])
     target_layers = [model.layer4[-1]]
 
+    # https://docs.python.org/release/2.3.5/whatsnew/section-slices.html
+    # The slicing syntax supports an optional 3rd "step" argument.
+    # Negative values also work to make a copy of the same list in reverse order
+    # >>> L = range(10)
+    # >>> L[::2]  # ==> [0, 2, 4, 6, 8]
+    # >>> L::-1]  # ==> [9, 8, 7, 6, 5, 4, 3, 2, 1, 0]
     rgb_img = cv2.imread(args.image_path, 1)[:, :, ::-1]
+    # cv2.imread(args.image_path, 1) ==> ndarray, shape: [224, 224, 3]
     rgb_img = np.float32(rgb_img) / 255
     input_tensor = preprocess_image(rgb_img,
                                     mean=[0.485, 0.456, 0.406],
                                     std=[0.229, 0.224, 0.225])
+    # input_tensor shape: [1, 3, 224, 224]
 
     # If None, returns the map for the highest scoring category.
     # Otherwise, targets the requested category.
@@ -113,22 +121,26 @@ if __name__ == '__main__':
                             target_category=target_category,
                             aug_smooth=args.aug_smooth,
                             eigen_smooth=args.eigen_smooth)
+        # grayscale_cam: ndarray, shape [1, 224, 224]
 
         # Here grayscale_cam has only one image in the batch
         grayscale_cam = grayscale_cam[0, :]
+        # grayscale_cam: ndarray, shape [224, 224]
 
         cam_image = show_cam_on_image(rgb_img, grayscale_cam, use_rgb=True)
 
         # cam_image is RGB encoded whereas "cv2.imwrite" requires BGR encoding.
         cam_image = cv2.cvtColor(cam_image, cv2.COLOR_RGB2BGR)
+    # with cam_algorithm
 
     gb_model = GuidedBackpropReLUModel(model=model, use_cuda=args.use_cuda)
     gb = gb_model(input_tensor, target_category=target_category)
+    # gb shape: [224, 224, 3]
 
     cam_mask = cv2.merge([grayscale_cam, grayscale_cam, grayscale_cam])
     cam_gb = deprocess_image(cam_mask * gb)
     gb = deprocess_image(gb)
 
     cv2.imwrite(f'{args.method}_cam.jpg', cam_image)
-    cv2.imwrite(f'{args.method}_gb.jpg', gb)
     cv2.imwrite(f'{args.method}_cam_gb.jpg', cam_gb)
+    cv2.imwrite(f'{args.method}_gb.jpg', gb)

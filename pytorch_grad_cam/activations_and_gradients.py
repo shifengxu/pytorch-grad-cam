@@ -9,18 +9,12 @@ class ActivationsAndGradients:
         self.reshape_transform = reshape_transform
         self.handles = []
         for target_layer in target_layers:
-            self.handles.append(
-                target_layer.register_forward_hook(
-                    self.save_activation))
-            # Backward compitability with older pytorch versions:
+            self.handles.append(target_layer.register_forward_hook(self.save_activation))
+            # Backward compatability with older pytorch versions:
             if hasattr(target_layer, 'register_full_backward_hook'):
-                self.handles.append(
-                    target_layer.register_full_backward_hook(
-                        self.save_gradient))
+                self.handles.append(target_layer.register_full_backward_hook(self.save_gradient))
             else:
-                self.handles.append(
-                    target_layer.register_backward_hook(
-                        self.save_gradient))
+                self.handles.append(target_layer.register_backward_hook(self.save_gradient))
 
     def save_activation(self, module, input, output):
         activation = output

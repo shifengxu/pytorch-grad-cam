@@ -22,8 +22,7 @@ class BaseCAM:
         self.reshape_transform = reshape_transform
         self.compute_input_gradient = compute_input_gradient
         self.uses_gradients = uses_gradients
-        self.activations_and_grads = ActivationsAndGradients(
-            self.model, target_layers, reshape_transform)
+        self.activations_and_grads = ActivationsAndGradients(self.model, target_layers, reshape_transform)
 
     """ Get a vector of weights for every channel in the target layer.
         Methods that return weights channels,
@@ -43,15 +42,11 @@ class BaseCAM:
             loss = loss + output[i, target_category[i]]
         return loss
 
-    def get_cam_image(self,
-                      input_tensor,
-                      target_layer,
-                      target_category,
-                      activations,
-                      grads,
-                      eigen_smooth=False):
-        weights = self.get_cam_weights(input_tensor, target_layer,
-                                       target_category, activations, grads)
+    def get_cam_image(self, input_tensor, target_layer, target_category, activations, grads, eigen_smooth=False):
+        weights = self.get_cam_weights(input_tensor, target_layer, target_category, activations, grads)
+        # weights shape:              [1, 2048]
+        # activations shape:          [1, 2048, 7, 7] ResNet50 last layer output size 7x7
+        # weighted_activations shape: [1, 2048, 7, 7]
         weighted_activations = weights[:, :, None, None] * activations
         if eigen_smooth:
             cam = get_2d_projection(weighted_activations)
@@ -64,8 +59,7 @@ class BaseCAM:
             input_tensor = input_tensor.cuda()
 
         if self.compute_input_gradient:
-            input_tensor = torch.autograd.Variable(input_tensor,
-                                                   requires_grad=True)
+            input_tensor = torch.autograd.Variable(input_tensor, requires_grad=True)
 
         output = self.activations_and_grads(input_tensor)
         if isinstance(target_category, int):
@@ -90,39 +84,30 @@ class BaseCAM:
         # This gives you more flexibility in case you just want to
         # use all conv layers for example, all Batchnorm layers,
         # or something else.
-        cam_per_layer = self.compute_cam_per_layer(input_tensor,
-                                                   target_category,
-                                                   eigen_smooth)
+        cam_per_layer = self.compute_cam_per_layer(input_tensor, target_category, eigen_smooth)
         return self.aggregate_multi_layers(cam_per_layer)
 
     def get_target_width_height(self, input_tensor):
         width, height = input_tensor.size(-1), input_tensor.size(-2)
         return width, height
 
-    def compute_cam_per_layer(
-            self,
-            input_tensor,
-            target_category,
-            eigen_smooth):
-        activations_list = [a.cpu().data.numpy()
-                            for a in self.activations_and_grads.activations]
-        grads_list = [g.cpu().data.numpy()
-                      for g in self.activations_and_grads.gradients]
+    def compute_cam_per_layer(self, input_tensor, target_category, eigen_smooth):
         target_size = self.get_target_width_height(input_tensor)
 
         cam_per_target_layer = []
+        act_list = [a.cpu().data.numpy() for a in self.activations_and_grads.activations]
+        grd_list = [g.cpu().data.numpy() for g in self.activations_and_grads.gradients]
         # Loop over the saliency image from every layer
-
-        for target_layer, layer_activations, layer_grads in \
-                zip(self.target_layers, activations_list, grads_list):
+        for target_layer, layer_act, layer_grd in zip(self.target_layers, act_list, grd_list):
             cam = self.get_cam_image(input_tensor,
                                      target_layer,
                                      target_category,
-                                     layer_activations,
-                                     layer_grads,
+                                     layer_act,
+                                     layer_grd,
                                      eigen_smooth)
-            cam[cam<0]=0 # works like mute the min-max scale in the function of scale_cam_image
-            scaled = self.scale_cam_image(cam, target_size)
+            # cam: ndarray, shape: [1, 7, 7]
+            cam[cam<0] = 0 # works like mute the min-max scale in the function of scale_cam_image
+            scaled = self.scale_cam_image(cam, target_size)  # shape [1, 224, 224]
             cam_per_target_layer.append(scaled[:, None, :])
 
         return cam_per_target_layer
@@ -185,8 +170,7 @@ class BaseCAM:
             return self.forward_augmentation_smoothing(
                 input_tensor, target_category, eigen_smooth)
 
-        return self.forward(input_tensor,
-                            target_category, eigen_smooth)
+        return self.forward(input_tensor, target_category, eigen_smooth)
 
     def __del__(self):
         self.activations_and_grads.release()

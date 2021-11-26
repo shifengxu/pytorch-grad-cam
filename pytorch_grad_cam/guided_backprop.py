@@ -8,29 +8,28 @@ class GuidedBackpropReLU(Function):
     @staticmethod
     def forward(self, input_img):
         positive_mask = (input_img > 0).type_as(input_img)
+        # https://pytorch.org/docs/stable/generated/torch.addcmul.html
         output = torch.addcmul(
-            torch.zeros(
-                input_img.size()).type_as(input_img),
+            torch.zeros(input_img.size()).type_as(input_img),
             input_img,
             positive_mask)
+        # Saves given tensors for a future call to backward().
         self.save_for_backward(input_img, output)
         return output
 
     @staticmethod
     def backward(self, grad_output):
         input_img, output = self.saved_tensors
-        grad_input = None
 
         positive_mask_1 = (input_img > 0).type_as(grad_output)
         positive_mask_2 = (grad_output > 0).type_as(grad_output)
+        grad_output_positive_1 = torch.addcmul(
+            torch.zeros(input_img.size()).type_as(input_img),
+            grad_output,
+            positive_mask_1)
         grad_input = torch.addcmul(
-            torch.zeros(
-                input_img.size()).type_as(input_img),
-            torch.addcmul(
-                torch.zeros(
-                    input_img.size()).type_as(input_img),
-                grad_output,
-                positive_mask_1),
+            torch.zeros(input_img.size()).type_as(input_img),
+            grad_output_positive_1,
             positive_mask_2)
         return grad_input
 
