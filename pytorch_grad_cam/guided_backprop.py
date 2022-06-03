@@ -48,7 +48,7 @@ class GuidedBackpropReLUModel:
         self.model.eval()
         self.cuda = use_cuda
         if self.cuda:
-            self.model = self.model.cuda()
+            self.model = self.model.cuda() if type(self.cuda) == bool else self.model.to(self.cuda)
 
     def forward(self, input_img):
         return self.model(input_img)
@@ -76,7 +76,7 @@ class GuidedBackpropReLUModel:
                                          GuidedBackpropReLUasModule())
 
         if self.cuda:
-            input_img = input_img.cuda()
+            input_img = input_img.cuda() if type(self.cuda) == bool else input_img.to(self.cuda)
 
         input_img = input_img.requires_grad_(True)
 

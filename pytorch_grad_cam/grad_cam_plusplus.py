@@ -16,6 +16,8 @@ class GradCAMPlusPlus(BaseCAM):
                         target_category,
                         activations,
                         grads):
+        # activations shape : [1, 2048, 7, 7]. On ResNet50
+        # grads shape       : [1, 2048, 7, 7]. On ResNet50
         grads_power_2 = grads**2
         grads_power_3 = grads_power_2 * grads
         # Equation 19 in https://arxiv.org/abs/1710.11063

@@ -18,7 +18,7 @@ class BaseCAM:
         self.target_layers = target_layers
         self.cuda = use_cuda
         if self.cuda:
-            self.model = model.cuda()
+            self.model = model.cuda() if type(self.cuda) is bool else model.to(self.cuda)
         self.reshape_transform = reshape_transform
         self.compute_input_gradient = compute_input_gradient
         self.uses_gradients = uses_gradients
@@ -36,7 +36,8 @@ class BaseCAM:
                         grads):
         raise Exception("Not Implemented")
 
-    def get_loss(self, output, target_category):
+    @staticmethod
+    def get_loss(output, target_category):
         loss = 0
         for i in range(len(target_category)):
             loss = loss + output[i, target_category[i]]
@@ -56,7 +57,7 @@ class BaseCAM:
 
     def forward(self, input_tensor, target_category=None, eigen_smooth=False):
         if self.cuda:
-            input_tensor = input_tensor.cuda()
+            input_tensor = input_tensor.cuda() if type(self.cuda) == bool else input_tensor.to(self.cuda)
 
         if self.compute_input_gradient:
             input_tensor = torch.autograd.Variable(input_tensor, requires_grad=True)
@@ -82,12 +83,13 @@ class BaseCAM:
         # It will compute the saliency image for every image,
         # and then aggregate them (with a default mean aggregation).
         # This gives you more flexibility in case you just want to
-        # use all conv layers for example, all Batchnorm layers,
+        # use all conv layers for example, all Batch-norm layers,
         # or something else.
         cam_per_layer = self.compute_cam_per_layer(input_tensor, target_category, eigen_smooth)
         return self.aggregate_multi_layers(cam_per_layer)
 
-    def get_target_width_height(self, input_tensor):
+    @staticmethod
+    def get_target_width_height(input_tensor):
         width, height = input_tensor.size(-1), input_tensor.size(-2)
         return width, height
 
@@ -106,7 +108,7 @@ class BaseCAM:
                                      layer_grd,
                                      eigen_smooth)
             # cam: ndarray, shape: [1, 7, 7]
-            cam[cam<0] = 0 # works like mute the min-max scale in the function of scale_cam_image
+            cam[cam < 0] = 0 # works like mute the min-max scale in the function of scale_cam_image
             scaled = self.scale_cam_image(cam, target_size)  # shape [1, 224, 224]
             cam_per_target_layer.append(scaled[:, None, :])
 
@@ -118,7 +120,8 @@ class BaseCAM:
         result = np.mean(cam_per_target_layer, axis=1)
         return self.scale_cam_image(result)
 
-    def scale_cam_image(self, cam, target_size=None):
+    @staticmethod
+    def scale_cam_image(cam, target_size=None):
         result = []
         for img in cam:
             img = img - np.min(img)
